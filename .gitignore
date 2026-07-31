@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+.venv/
+
+# Trained models
+models/*.pth
+
+# Dataset
+dataset/
+predict_samples/
+
+# Generated spectrogram cache
+spectrograms/
+
+# Results
+results/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Raw/generated signal data
+data/
