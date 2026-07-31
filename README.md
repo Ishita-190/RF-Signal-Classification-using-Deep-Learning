@@ -1,35 +1,45 @@
 # RF Signal Classification using Deep Learning
-### Project Overview & Journal
 
----
-
-## Objective
+## Project Overview
 
 The goal of this project is to build a system that can listen to the radio frequency spectrum in real time and automatically identify what type of signal it is hearing,without any human intervention. Given a raw stream of IQ samples from a software-defined radio dongle, the system should classify the signal into one of several known categories with high confidence.
 
 This sits at the intersection of signal processing and deep learning. Rather than hand-crafting features from the RF spectrum, we let convolutional neural networks learn directly from the data, either from the raw time-domain waveform or from a visual time-frequency representation of it.
 
+The system supports both offline inference on pre-recorded `.npy` captures and live classification using an SDR.
+
+The project includes two CNN-based approaches:
+
+- **1D SignalCNN**: learns directly from raw IQ waveforms.
+- **2D SpectrogramCNN**: converts IQ windows into spectrograms and learns time-frequency patterns.
+
 ---
+## Project Workflow
+
+The overall workflow of the project is illustrated below:
+
+> <img>
 
 ## What the System Does
 
-At a high level:
+The overall pipeline is:
 
-1. An RTL-SDR dongle captures IQ samples from the air at a chosen frequency
-2. Those samples are preprocessed into a format the model understands
-3. A trained CNN classifies the signal into one of the known categories
-4. The prediction is returned with a confidence score
+1. An RTL-SDR captures raw IQ samples at a selected center frequency.
+2. The IQ samples are normalized and divided into windows.
+3. The samples are converted into the representation required by the selected model.
+4. A CNN predicts the signal class.
+5. The prediction is returned with a confidence score.
 
-The system can also be run offline on pre-recorded `.npy` files for evaluation and experimentation.
+The models can also be used with previously captured `.npy` files, so an SDR is not required for offline inference.
 
 ### Signal Classes
 
 | Class | Description |
 |---|---|
-| ADS_B | Aircraft transponder signals (1090 MHz) |
-| FM_broadcast | Commercial FM radio (88–108 MHz) |
-| ISM_sensors | Industrial/scientific/medical band devices (433/868/915 MHz) |
-| noise | Background RF noise / no signal |
+| `ADS_B` | Aircraft transponder signals around 1090 MHz |
+| `FM_broadcast` | Commercial FM radio signals |
+| `ISM_sensors` | Signals from ISM-band devices, including 433 MHz systems |
+| `noise` | Background RF noise / no target signal |
 
 ---
 
@@ -49,50 +59,94 @@ All recordings are split stratified per class: **70% train / 10% validation / 20
 
 ---
 
-## The Two Models
+## Models
 
-Two independent CNN architectures were trained and evaluated. They share the same training loop, optimizer, loss function, and evaluation pipeline — the only difference is how the raw IQ data is represented before entering the network.
+### 1D Model: SignalCNN
 
-### Model 1D — SignalCNN
+The 1D model operates directly on the raw IQ signal.
 
-Operates directly on the raw IQ time series. Each 2048-sample window is split into two channels (I and Q) and fed into a stack of 1D convolutions. The network learns temporal patterns in the waveform itself.
+Each 2048-sample window is represented using two channels:
 
-- Input: `[B, 2, 2048]` — 2 channels (I/Q), 2048 time steps
-- 3 × Conv1d blocks with shrinking kernels (9→7→5) + BatchNorm + ReLU + MaxPool1d(4)
-- AdaptiveAvgPool1d → Flatten → Dropout(0.3) → Linear classifier
-- Trained on: ADS_B, FM_broadcast, ISM_sensors, noise (4 classes)
+- I: in-phase component
+- Q: quadrature component
 
-### Model 2D — SpectrogramCNN
+Input shape:
 
-Converts each IQ window into a 128×128 spectrogram image using STFT, then applies 2D convolutions. The network learns patterns in the time-frequency domain — the same representation a human would look at in a spectrum analyser.
+```text
+[B, 2, 2048]
+```
 
-- Input: `[B, 1, 128, 128]` — single-channel spectrogram image
-- 4 × Conv2d blocks (1→32→64→128→256) + BatchNorm + ReLU + MaxPool2d(2)
-- AdaptiveAvgPool2d → Flatten → Dropout(0.3) → Linear classifier
-- Trained on: ADS_B, FM_broadcast, ISM_sensors, NOAA_weather, noise (5 classes)
+The model uses a series of `Conv1d` blocks with BatchNorm, ReLU, and MaxPool layers, followed by adaptive average pooling, dropout, and a linear classifier.
+
+### 2D Model: SpectrogramCNN
+
+The 2D model converts each 2048-sample IQ window into a `128 × 128` spectrogram.
+
+Input shape:
+
+```text
+[B, 1, 128, 128]
+```
+
+The spectrogram is generated using an STFT with:
+
+- 256-sample Hann window
+- 50% overlap
+- log compression
+- min-max normalization
+- resizing to `128 × 128`
+
+The CNN uses multiple `Conv2d` blocks with BatchNorm, ReLU, and MaxPool layers, followed by adaptive average pooling, dropout, and a linear classifier.
+
+Spectrograms are generated during data loading rather than storing the entire spectrogram dataset as `.npy` files. This keeps disk and RAM usage much lower.
 
 ---
 
 ## Spectrograms
 
-The 2D model works by converting each IQ window into a spectrogram — a 2D image where the x-axis is time, the y-axis is frequency, and pixel brightness represents signal power. These are generated using a short-time Fourier transform (STFT) with a 256-sample Hann window, log-compressed, min-max normalised, and resized to 128×128.
+A spectrogram represents the signal in the time-frequency domain:
 
-Each signal class has a visually distinct spectrogram signature:
+- **X-axis:** time
+- **Y-axis:** frequency
+- **Brightness:** signal magnitude/power
 
-**ADS_B** — short sharp bursts, sparse in time
+Typical signal patterns include:
 
-**FM_broadcast** — wide continuous band, dense and uniform
+- **ADS-B:** short bursts
+- **FM broadcast:** continuous wide-band structure
+- **ISM sensors:** narrow/intermittent transmissions
+- **Noise:** diffuse and less structured RF energy
 
-**ISM_sensors** — narrow intermittent pulses
+Example spectrograms can be generated locally using the project's spectrogram utilities.
 
-**noise** — flat, diffuse, no structure
-
-<!-- Attach spectrogram images below -->
 | ADS_B | FM_broadcast | ISM_sensors | noise |
 |---|---|---|---|
 | ![ADS_B](results/2d/spectrograms/spectrogram_0.png) | ![FM](results/2d/spectrograms/spectrogram_1.png) | ![ISM](results/2d/spectrograms/spectrogram_2.png) | ![noise](results/2d/spectrograms/spectrogram_4.png) |
 
+
 ---
+
+## SDR Hardware
+
+The SDR used for this project was:
+
+**Nooelec NESDR SMArt v5 SDR - HF/VHF/UHF (100 kHz–1.75 GHz) RTL-SDR, RTL2832U & R820T2-Based Software Defined Radio**
+
+The SDR is used to capture raw IQ samples from the RF environment.
+
+The capture pipeline supports:
+
+- configurable center frequency
+- configurable sample count
+- configurable sample rate
+- automatic gain
+- saving captures as `.npy` files
+
+The default sample rate used in the project is:
+
+```text
+1,024,000 samples/second
+```
 
 ## SDR Interaction
 
@@ -103,11 +157,228 @@ The RTL-SDR dongle is the hardware interface between the physical RF environment
 - Reads IQ samples in chunks to avoid USB buffer overflows
 - Wraps captures in a metadata dict and saves as `.npy` — the exact same format as the training dataset
 
-<!-- Attach SDR live feed screenshot below -->
 > <img width="959" height="503" alt="Screenshot 2026-07-28 143843" src="https://github.com/user-attachments/assets/12c56b21-0c7c-4969-a57d-ba7705ddb5c3" />
 > <img width="959" height="502" alt="Screenshot 2026-07-29 105957" src="https://github.com/user-attachments/assets/58781b4a-b216-494b-b725-dd9a10b99c61" />
 
+---
 
+## Using Your Own Captured Samples
+
+You can use your own SDR recordings to test the trained models.
+
+The project also includes a `live_capture.py` script that allows users with a compatible RTL-SDR to capture raw IQ samples directly from the RF environment.
+
+The workflow is:
+
+- Connect the RTL-SDR to the system.
+- Specify the center frequency and number of samples to capture.
+- Capture raw IQ samples from the selected frequency.
+- Save the capture as a `.npy` file for later use.
+- Create a `predict_samples` directory in your local project setup
+- Place the captured file in the `predict_samples/` directory to run offline inference using either the 1D or 2D model.
+- Alternatively, use the live classifier to perform classification directly from the SDR.
+
+For example:
+
+```bash
+python src/live_capture.py 1090000000 --output predict_samples/live.npy
+```
+
+---
+
+## Live Classification
+
+If you have a compatible RTL-SDR, you can also use the live classifier.
+
+The live workflow is:
+
+```text
+SDR → IQ samples → preprocessing → trained CNN → predicted class + confidence
+```
+
+The live classifier requires:
+
+- a connected RTL-SDR
+- a center frequency
+- a trained model checkpoint
+
+For example, the classifier can be run by providing the center frequency and model to the live-classification script.
+
+Refer to the command-line arguments in `src/live_classifier.py` for the exact invocation supported by the current version.
+
+---
+
+## Results
+
+### 1D SignalCNN
+
+The 1D model was evaluated on the four-class test set.
+
+| Metric | Score |
+|---|---:|
+| Test Accuracy | **99.95%** |
+| Macro Precision | **99.95%** |
+| Macro Recall | **99.95%** |
+| Macro F1 | **99.95%** |
+| Test Loss | **0.0029** |
+
+```text
+              precision    recall  f1-score   support
+
+       ADS_B       1.00      1.00      1.00      2111
+FM_broadcast       1.00      1.00      1.00      2000
+ ISM_sensors       1.00      1.00      1.00      2298
+       noise       1.00      1.00      1.00      1848
+
+    accuracy                           1.00      8257
+```
+
+> <img width="2717" height="2365" alt="image" src="https://github.com/user-attachments/assets/0d1b8d02-338c-43af-aab2-1c083fc55649" />
+
+### 2D SpectrogramCNN
+
+The 2D model was evaluated on 31,443 test windows.
+
+| Metric | Score |
+|---|---:|
+| Test Accuracy | **93.2%** |
+| Precision | **93.7%** |
+| Recall | **93.1%** |
+| F1-score | **93.1%** |
+| Test Loss | **0.16** |
+
+```text
+              precision    recall  f1-score   support
+
+       ADS_B       0.83      0.95      0.89      8000
+FM_broadcast       0.98      1.00      0.99      7598
+ ISM_sensors       0.99      1.00      0.99      8149
+       noise       0.95      0.78      0.86      7696
+
+    accuracy                           0.93     31443
+   macro avg       0.94      0.93      0.93     31443
+weighted avg       0.94      0.93      0.93     31443
+```
+> <img width="2717" height="2365" alt="image" src="confusion_matrix.png />
+
+### Model Comparison
+
+| | 1D SignalCNN | 2D SpectrogramCNN |
+|---|---|---|
+| Representation | Raw IQ waveform | STFT spectrogram |
+| Input | `[B, 2, 2048]` | `[B, 1, 128, 128]` |
+| Test Accuracy | **99.95%** | **93.2%** |
+| Macro F1 | **99.95%** | **93.1%** |
+| Test Loss | **0.0029** | **0.16** |
+| Main advantage | High classification accuracy | Time-frequency representation |
+| Main trade-off | Raw waveform representation | Higher preprocessing cost |
+
+The 1D model achieved higher test accuracy on its four-class problem. The 2D model provides a time-frequency representation that makes signal structure easier to visualize and interpret.
+
+---
+
+## Tech Stack
+
+| Component | Library / Tool |
+|---|---|
+| Deep learning | PyTorch |
+| Signal processing | SciPy |
+| Numerical computing | NumPy |
+| Evaluation | scikit-learn |
+| Visualization | Matplotlib, Seaborn |
+| SDR interface | pyrtlsdr |
+| Notebooks | Jupyter / ipykernel |
+| Progress bars | tqdm |
+| Python | 3.11+ |
+| SDR | Nooelec NESDR SMArt v5 |
+
+---
+
+## Reproducing the Project
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Ishita-190/RF-Signal-Classification-using-Deep-Learning.git
+cd RF-Signal-Classification-using-Deep-Learning
+```
+
+### 2. Create a virtual environment
+
+Windows:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+Linux/macOS:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Prepare the dataset
+
+Place the required dataset files in the expected local dataset directory.
+
+The repository intentionally does not include the full dataset or trained model checkpoints.
+
+### 5. Train the 1D model
+
+## Notebooks
+
+The project includes two Jupyter notebooks, one for each model: **experiements_1d.ipynb** and **experiements_2d.ipynb**. Each notebook runs the complete pipeline from the raw dataset to model evaluation.
+
+The overall process in each notebook is:
+
+1. **Load the dataset** and map the RF recordings to their corresponding signal classes.
+2. **Preprocess the raw IQ samples** according to the requirements of the selected model.
+3. **Split the dataset** into stratified training, validation, and test sets.
+4. **Prepare the model inputs**:
+
+   * 1D model: normalized I/Q windows.
+   * 2D model: 128×128 spectrograms generated from the IQ windows using STFT.
+5. **Initialize and train the CNN**, while tracking training and validation loss and accuracy.
+6. **Evaluate the trained model** on the unseen test set.
+7. **Calculate evaluation metrics**, including accuracy, precision, recall, F1-score, and test loss.
+8. **Generate visualizations and results**, such as confusion matrices, training curves, and example spectrograms for the 2D model.
+
+Users can simply run the cells in the respective notebook in order to reproduce the complete pipeline without having to manually execute each individual preprocessing, training, or evaluation script.
+
+
+### 7. Run offline prediction
+
+Place your captured `.npy` files in:
+
+```text
+predict_samples/
+```
+
+Then run the appropriate prediction module:
+
+```bash
+cd src
+python -m model_1d.predict
+```
+
+or:
+
+```bash
+cd src
+python -m model_2d.predict_2d
+```
+
+### 8. Run live SDR classification
+
+Connect the Nooelec NESDR SMArt v5 or another compatible RTL-SDR and provide the required center frequency and trained model to the live classifier.
 
 To capture a sample and run inference:
 
@@ -124,104 +395,3 @@ cd src && python -m model_2d.predict_2d
 
 ---
 
-## Results
-
-### Model 1D — SignalCNN (4 classes)
-
-| Metric | Score |
-|---|---|
-| Test Accuracy | **99.95%** |
-| Macro Precision | 99.95% |
-| Macro Recall | 99.95% |
-| Macro F1 | 99.95% |
-| Test Loss | 0.0029 |
-
-```
-              precision    recall  f1-score   support
-
-       ADS_B       1.00      1.00      1.00      2111
-FM_broadcast       1.00      1.00      1.00      2000
- ISM_sensors       1.00      1.00      1.00      2298
-       noise       1.00      1.00      1.00      1848
-
-    accuracy                           1.00      8257
-```
-
-<!-- Attach 1D confusion matrix below -->
-> <img width="2717" height="2365" alt="image" src="https://github.com/user-attachments/assets/0d1b8d02-338c-43af-aab2-1c083fc55649" />
-
----
-
-### Model 2D — SpectrogramCNN (5 classes)
-
-| Metric | Score |
-|---|---|
-| Test Accuracy | **95.51%** |
-| Macro Precision | 95.56% |
-| Macro Recall | 95.51% |
-| Macro F1 | 95.52% |
-| Test Loss | 0.1232 |
-
-```
-              precision    recall  f1-score   support
-
-       ADS_B       1.00      0.99      0.99      1500
-FM_broadcast       0.98      0.95      0.97      1500
- ISM_sensors       0.99      1.00      0.99      1500
-       noise       0.90      0.91      0.91      1500
-
-    accuracy                           0.96      7500
-```
----
-
-### Model Comparison
-
-| | 1D SignalCNN | 2D SpectrogramCNN |
-|---|---|---|
-| Classes | 4 | 5 |
-| Test Accuracy | 99.95% | 95.51% |
-| Macro F1 | 99.95% | 95.52% |
-| Input | Raw IQ waveform | STFT spectrogram |
-| Preprocessing cost | Low | Higher (STFT per window) |
-| Strengths | Near-perfect on clean signals | Handles more classes, human-interpretable |
-| Weaknesses | Fewer classes trained | singals/noise confusion |
-
-The 1D model achieves near-perfect accuracy on its 4-class problem. The 2D model trades a small accuracy drop for an additional class and a more interpretable input representation.
-
----
-
-## Tech Stack
-
-| Component | Library / Tool |
-|---|---|
-| Deep learning framework | PyTorch >= 2.1.0 |
-| Signal processing | SciPy >= 1.11.0 |
-| Numerical computing | NumPy >= 1.24.0 |
-| ML metrics & evaluation | scikit-learn >= 1.3.0 |
-| Plotting | Matplotlib >= 3.7.0, Seaborn >= 0.12.0 |
-| SDR hardware interface | pyrtlsdr >= 0.3.0 |
-| Notebooks | ipykernel >= 6.25.0 |
-| Progress bars | tqdm >= 4.65.0 |
-| Hardware | RTL-SDR USB dongle |
-| Python | 3.11+ |
-
----
-
-## File Reference
-
-```
-RF-Signal-Classification-using-Deep-Learning/
-├── src/
-│   ├── dataset.py              — data loading and label mapping
-│   ├── live_capture.py         — RTL-SDR capture interface
-│   ├── live_classifier.py      — live prediction from SDR stream
-│   ├── model_1d/               — 1D CNN pipeline
-│   └── model_2d/               — 2D CNN pipeline
-├── data/datasets_validated/    — training dataset (.npy per recording)
-├── models/                     — saved checkpoints
-├── results/                    — evaluation outputs, confusion matrices, spectrograms
-├── predict_samples/            — .npy files for ad-hoc inference
-├── notebooks/                  — Jupyter experiment notebooks
-├── cnn.md                      — detailed CNN architecture & pipeline reference
-└── README.md                 — this file
-```
