@@ -18,7 +18,7 @@ The project includes two CNN-based approaches:
 
 The overall workflow of the project is illustrated below:
 
-> <img>
+<img width="1000" height="1100" alt="pipeline drawio" src="https://github.com/user-attachments/assets/9482acdc-76c7-4a50-9202-938c5509d560" />
 
 ## What the System Does
 
@@ -36,10 +36,10 @@ The models can also be used with previously captured `.npy` files, so an SDR is 
 
 | Class | Description |
 |---|---|
-| `ADS_B` | Aircraft transponder signals around 1090 MHz |
-| `FM_broadcast` | Commercial FM radio signals |
-| `ISM_sensors` | Signals from ISM-band devices, including 433 MHz systems |
-| `noise` | Background RF noise / no target signal |
+| ADS_B | Aircraft transponder signals around 1090 MHz |
+| FM_broadcast | Commercial FM radio signals |
+| ISM_sensors | Signals from ISM-band devices, including 433 MHz systems |
+| noise | Background RF noise / no target signal |
 
 ---
 
@@ -121,7 +121,7 @@ Example spectrograms can be generated locally using the project's spectrogram ut
 
 | ADS_B | FM_broadcast | ISM_sensors | noise |
 |---|---|---|---|
-| ![ADS_B](results/2d/spectrograms/spectrogram_0.png) | ![FM](results/2d/spectrograms/spectrogram_1.png) | ![ISM](results/2d/spectrograms/spectrogram_2.png) | ![noise](results/2d/spectrograms/spectrogram_4.png) |
+| <img width="250" height="250" alt="ADS-B spectrogram" src="https://github.com/user-attachments/assets/438751bb-379e-4557-96e2-e8822e48b650" /> | <img width="250" height="250" alt="FM broadcast spectrogram" src="https://github.com/user-attachments/assets/b015c71b-bcd9-426b-a83b-9bbe73f89d82" /> | <img width="250" height="250" alt="ISM sensors spectrogram" src="https://github.com/user-attachments/assets/947e8a69-5c81-4a8e-973a-f1413128b4ba" /> | <img width="250" height="250" alt="Noise spectrogram" src="https://github.com/user-attachments/assets/be0fd365-ad79-491d-adc6-2e21131d5fa7" /> |
 
 
 ---
@@ -204,7 +204,7 @@ The live classifier requires:
 
 For example, the classifier can be run by providing the center frequency and model to the live-classification script.
 
-Refer to the command-line arguments in `src/live_classifier.py` for the exact invocation supported by the current version.
+Refer to the command-line arguments in the [Run live SDR classification](#8-run-live-sdr-classification) section below.
 
 ---
 
@@ -259,7 +259,7 @@ FM_broadcast       0.98      1.00      0.99      7598
    macro avg       0.94      0.93      0.93     31443
 weighted avg       0.94      0.93      0.93     31443
 ```
-> <img width="2717" height="2365" alt="image" src="confusion_matrix.png />
+> <img width="2717" height="2365" alt="image" src="https://github.com/user-attachments/assets/d7649412-1e5c-4355-844b-099b63cfa38d" />
 
 ### Model Comparison
 
@@ -333,8 +333,6 @@ The repository intentionally does not include the full dataset or trained model 
 
 ### 5. Train the 1D model
 
-## Notebooks
-
 The project includes two Jupyter notebooks, one for each model: **experiements_1d.ipynb** and **experiements_2d.ipynb**. Each notebook runs the complete pipeline from the raw dataset to model evaluation.
 
 The overall process in each notebook is:
@@ -392,6 +390,20 @@ cd src && python -m model_1d.predict
 # Run 2D model inference
 cd src && python -m model_2d.predict_2d
 ```
+Or, you can connect the SDR to your laptop, tune it to the required frequency using SDR++ and run the following commands
+
+```bash
+# run the 1D CNN model for any of the 4 signal types (ex - noise)
+python live_classifier.py 920000000 --model 1d
+
+# run the 2D CNN model for any of the 4 signal types (ex - FM broadcast)
+python live_classifier.py 93500000 --model 2d
+```
+You will obtain live predictions in this manner:
+
+><img width="577" height="365" alt="Screenshot 2026-07-31 140127" src="https://github.com/user-attachments/assets/d2f9723c-92a4-41e6-9423-369877b8bb43" />
+
+><img width="634" height="317" alt="Screenshot 2026-07-31 135812" src="https://github.com/user-attachments/assets/d65b026d-de70-4e18-9430-cdc29026c146" />
 
 ---
 
