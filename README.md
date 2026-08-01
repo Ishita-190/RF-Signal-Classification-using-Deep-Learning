@@ -41,6 +41,8 @@ The models can also be used with previously captured `.npy` files, so an SDR is 
 | ISM_sensors | Signals from ISM-band devices, including 433 MHz systems |
 | noise | Background RF noise / no target signal |
 
+<img width="1389" height="788" alt="image" src="https://github.com/user-attachments/assets/49c8093d-0f62-449f-bcc0-981943875679" />
+
 ---
 
 ## Dataset
@@ -234,6 +236,8 @@ FM_broadcast       1.00      1.00      1.00      2000
 ```
 
 > <img width="2717" height="2365" alt="image" src="https://github.com/user-attachments/assets/0d1b8d02-338c-43af-aab2-1c083fc55649" />
+> <img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/fa47a122-9af4-44f6-9461-7c5acba5351b" />
+> <img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/839ab70e-d894-4116-9fa9-7feff4715e37" />
 
 ### 2D SpectrogramCNN
 
@@ -259,7 +263,10 @@ FM_broadcast       0.98      1.00      0.99      7598
    macro avg       0.94      0.93      0.93     31443
 weighted avg       0.94      0.93      0.93     31443
 ```
+
 > <img width="2717" height="2365" alt="image" src="https://github.com/user-attachments/assets/d7649412-1e5c-4355-844b-099b63cfa38d" />
+> <img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/3e34b262-8f69-4ea5-8705-d9f401e72ed0" />
+> <img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/2a7658b3-6e03-436d-b34a-582725358cbe" />
 
 ### Model Comparison
 
