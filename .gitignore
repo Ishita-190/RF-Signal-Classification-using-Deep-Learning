@@ -7,7 +7,7 @@ venv/
 .venv/
 
 # Trained models
-models/*.pth
+models/model_epoch_*.pth
 
 # Dataset
 dataset/
