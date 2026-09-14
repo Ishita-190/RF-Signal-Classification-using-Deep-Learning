@@ -1,0 +1,10 @@
+              precision    recall  f1-score   support
+
+       ADS_B       0.83      0.95      0.89      8000
+FM_broadcast       0.98      1.00      0.99      7598
+ ISM_sensors       0.99      1.00      0.99      8149
+       noise       0.95      0.78      0.86      7696
+
+    accuracy                           0.93     31443
+   macro avg       0.94      0.93      0.93     31443
+weighted avg       0.94      0.93      0.93     31443

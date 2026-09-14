@@ -1,0 +1,42 @@
+{
+  "test_loss": 0.11273212902083862,
+  "test_accuracy": 0.9366472664822059,
+  "macro_precision": 0.943998848643721,
+  "macro_recall": 0.937493198129336,
+  "macro_f1": 0.9360996132330475,
+  "weighted_precision": 0.9448778270470456,
+  "weighted_recall": 0.9366472664822059,
+  "weighted_f1": 0.9361088997053225,
+  "confusion_matrix": [
+    [
+      6214,
+      3,
+      1,
+      1782
+    ],
+    [
+      1,
+      7592,
+      2,
+      3
+    ],
+    [
+      0,
+      0,
+      8149,
+      0
+    ],
+    [
+      183,
+      8,
+      9,
+      7496
+    ]
+  ],
+  "class_names": [
+    "ADS_B",
+    "FM_broadcast",
+    "ISM_sensors",
+    "noise"
+  ]
+}

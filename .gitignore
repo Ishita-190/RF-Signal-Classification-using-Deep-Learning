@@ -13,14 +13,10 @@ models/*.pth
 dataset/
 predict_samples/
 
-# Generated spectrogram cache
-spectrograms/
-
-# Results
-results/
-
 # Jupyter
 .ipynb_checkpoints/
+notebooks/temp.ipynb
+tree
 
 # IDE
 .vscode/
